@@ -1,0 +1,25 @@
+{
+  "name": "pagseguro-v2-functions",
+  "description": "Cloud Functions for Firebase - PagBank (PagSeguro v2) for E-Com Plus",
+  "scripts": {
+    "serve": "firebase serve --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "@ecomplus/application-sdk": "^22.0.0-firestore.1.15.7",
+    "@ecomplus/client": "^2.4.0",
+    "@ecomplus/utils": "^1.4.1",
+    "@google-cloud/firestore": "^7.11.6",
+    "axios": "^1.13.2",
+    "express": "^4.22.1",
+    "firebase-admin": "^11.11.1",
+    "firebase-functions": "^4.9.0"
+  },
+  "private": true
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@ecomplus/app-pagseguro-v2",
+  "version": "1.0.0",
+  "description": "PagBank (PagSeguro v2) payment app for E-Com Plus",
+  "license": "MIT",
+  "scripts": {
+    "deploy": "firebase deploy --token $FIREBASE_TOKEN --project $FIREBASE_PROJECT_ID"
+  },
+  "dependencies": {}
+}

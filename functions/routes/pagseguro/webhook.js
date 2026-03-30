@@ -1,0 +1,118 @@
+const parseChargeStatus = require('../../lib/pagseguro/parse-status')
+const { logger } = require('../../context')
+
+exports.post = async ({ appSdk }, req, res) => {
+  const payload = req.body
+
+  // validate payload structure
+  if (!payload || typeof payload !== 'object') {
+    return res.sendStatus(204)
+  }
+
+  // PagBank sends the full order object with charges array
+  const charges = payload.charges
+  if (!charges || !Array.isArray(charges) || !charges.length) {
+    return res.sendStatus(204)
+  }
+
+  const charge = charges[0]
+  if (!charge || !charge.id || !charge.status) {
+    return res.sendStatus(204)
+  }
+
+  // storeId is embedded in the notification URL as ?store_id=XXX
+  const storeId = parseInt(req.query.store_id, 10)
+  if (!storeId) {
+    logger.warn('PagBank webhook: missing store_id in query string')
+    return res.sendStatus(400)
+  }
+
+  const chargeId = charge.id
+  const chargeStatus = charge.status
+  const ecomStatus = parseChargeStatus(chargeStatus)
+
+  logger.info(`PagBank webhook: charge ${chargeId} → ${chargeStatus} (${ecomStatus})`, {
+    storeId,
+    orderId: payload.reference_id
+  })
+
+  try {
+    await updateOrderPaymentStatus(appSdk, storeId, chargeId, ecomStatus)
+    res.sendStatus(200)
+  } catch (err) {
+    if (err.name === 'NotFound') {
+      logger.warn(`PagBank webhook: order not found for charge ${chargeId}`, { storeId })
+      // retry after 5s (race condition with create-transaction)
+      setTimeout(async () => {
+        try {
+          await updateOrderPaymentStatus(appSdk, storeId, chargeId, ecomStatus)
+        } catch (retryErr) {
+          logger.error('PagBank webhook retry failed', { storeId, chargeId, err: retryErr.message })
+        }
+      }, 5000)
+      return res.sendStatus(200) // return 200 so PagBank doesn't keep retrying
+    }
+    logger.error('PagBank webhook error', { storeId, chargeId, err: err.message })
+    res.status(500).send({ error: err.message })
+  }
+}
+
+/**
+ * Find order in E-Com Plus by charge ID and post payment status update.
+ * @throws {Error} with name='NotFound' if order not found
+ */
+const updateOrderPaymentStatus = async (appSdk, storeId, chargeId, ecomStatus) => {
+  const endpoint = `orders.json?transactions.intermediator.transaction_code=${chargeId}` +
+    '&fields=_id,financial_status,transactions._id,transactions.status,transactions.intermediator'
+
+  const result = await appSdk.apiRequest(storeId, endpoint, 'GET')
+  const orders = result && result.response && result.response.data && result.response.data.result
+
+  if (!orders || !orders.length) {
+    const err = new Error(`No order found for charge ${chargeId}`)
+    err.name = 'NotFound'
+    throw err
+  }
+
+  const order = orders[0]
+
+  // find the matching transaction
+  const matchTransaction = order.transactions && order.transactions.find(t => {
+    return t.intermediator && t.intermediator.transaction_code === chargeId
+  })
+
+  if (!matchTransaction) {
+    const err = new Error(`Transaction ${chargeId} not found in order ${order._id}`)
+    err.name = 'NotFound'
+    throw err
+  }
+
+  // idempotency: skip if status is already up-to-date
+  const currentStatus = matchTransaction.status && matchTransaction.status.current
+  const financialStatus = order.financial_status && order.financial_status.current
+
+  if (currentStatus === ecomStatus) {
+    logger.info(`PagBank webhook: status already ${ecomStatus}, skipping`, { storeId, chargeId })
+    return
+  }
+  if (financialStatus === ecomStatus && ['paid', 'voided', 'refunded'].includes(ecomStatus)) {
+    logger.info(`PagBank webhook: financial status already ${ecomStatus}, skipping`, { storeId, chargeId })
+    return
+  }
+
+  // post payment history update
+  await appSdk.apiRequest(
+    storeId,
+    `orders/${order._id}/payments_history.json`,
+    'POST',
+    {
+      transaction_id: matchTransaction._id,
+      date_time: new Date().toISOString(),
+      status: ecomStatus,
+      notification_code: chargeId,
+      flags: ['pagseguro']
+    }
+  )
+
+  logger.info(`PagBank webhook: updated order ${order._id} to ${ecomStatus}`, { storeId, chargeId })
+}

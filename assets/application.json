@@ -1,0 +1,258 @@
+{
+  "app_id": 0,
+  "state": "active",
+  "title": "PagBank (PagSeguro v2)",
+  "slug": "pagseguro-v2",
+  "version": "1.0.0",
+  "type": "external",
+  "authentication": true,
+  "auth_callback_uri": "https://us-central1-CHANGE_ME.cloudfunctions.net/app/ecom/auth-callback",
+  "auth_scope": {
+    "stores": ["GET"],
+    "procedures": ["POST"],
+    "products": ["GET"],
+    "orders": ["GET", "POST", "PATCH"],
+    "orders/payments_history": ["GET", "POST"],
+    "payments": ["POST"]
+  },
+  "modules": {
+    "list_payments": {
+      "enabled": true,
+      "endpoint": "https://us-central1-CHANGE_ME.cloudfunctions.net/app/ecom/modules/list-payments"
+    },
+    "create_transaction": {
+      "enabled": true,
+      "endpoint": "https://us-central1-CHANGE_ME.cloudfunctions.net/app/ecom/modules/create-transaction"
+    }
+  },
+  "admin_settings": {
+    "pagbank_token": {
+      "schema": {
+        "type": "string",
+        "maxLength": 255,
+        "title": "Token PagBank",
+        "description": "Token de autenticação Bearer da conta PagBank. Obtenha em: Minha Conta → Configurações → Integrações → Token de segurança"
+      },
+      "hide": true
+    },
+    "sandbox": {
+      "schema": {
+        "type": "boolean",
+        "default": false,
+        "title": "Sandbox (ambiente de testes)",
+        "description": "Ative para usar o ambiente sandbox do PagBank com credenciais de teste"
+      },
+      "hide": false
+    },
+    "credit_card": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "disabled": {
+            "type": "boolean",
+            "title": "Desabilitar cartão de crédito",
+            "default": false
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Rótulo"
+          },
+          "min_amount": {
+            "type": "number",
+            "minimum": 0,
+            "title": "Valor mínimo do pedido"
+          }
+        },
+        "title": "Cartão de crédito"
+      },
+      "hide": false
+    },
+    "installments_option": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "max_number": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 24,
+            "default": 12,
+            "title": "Número máximo de parcelas"
+          },
+          "min_installment": {
+            "type": "number",
+            "minimum": 1,
+            "default": 5,
+            "title": "Valor mínimo por parcela (R$)"
+          },
+          "tax_value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 0,
+            "title": "Taxa de juros ao mês (%)",
+            "description": "Juros aplicados após o número de parcelas sem juros"
+          },
+          "interest_free_installments": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24,
+            "default": 1,
+            "title": "Parcelas sem juros"
+          }
+        },
+        "title": "Parcelamento"
+      },
+      "hide": false
+    },
+    "banking_billet": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "disabled": {
+            "type": "boolean",
+            "title": "Desabilitar boleto bancário",
+            "default": false
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Rótulo"
+          },
+          "expiration_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 3,
+            "title": "Dias para vencimento do boleto"
+          },
+          "min_amount": {
+            "type": "number",
+            "minimum": 0,
+            "title": "Valor mínimo do pedido"
+          },
+          "instruction_lines": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "first": {
+                "type": "string",
+                "maxLength": 75,
+                "title": "Instrução linha 1"
+              },
+              "second": {
+                "type": "string",
+                "maxLength": 75,
+                "title": "Instrução linha 2"
+              }
+            },
+            "title": "Instruções do boleto"
+          }
+        },
+        "title": "Boleto bancário"
+      },
+      "hide": false
+    },
+    "pix": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "disabled": {
+            "type": "boolean",
+            "title": "Desabilitar PIX",
+            "default": false
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Rótulo"
+          },
+          "expiration_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 43200,
+            "default": 1440,
+            "title": "Expiração do QR Code (minutos)",
+            "description": "Padrão: 1440 minutos (24 horas)"
+          },
+          "min_amount": {
+            "type": "number",
+            "minimum": 0,
+            "title": "Valor mínimo do pedido"
+          }
+        },
+        "title": "PIX"
+      },
+      "hide": false
+    },
+    "payment_link": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enable": {
+            "type": "boolean",
+            "title": "Habilitar link de pagamento PagBank",
+            "default": false,
+            "description": "Redireciona o cliente para o checkout hospedado do PagBank"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Rótulo"
+          }
+        },
+        "title": "Link de pagamento (Checkout PagBank)"
+      },
+      "hide": false
+    },
+    "discount": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "apply_at": {
+            "type": "string",
+            "enum": ["total", "subtotal", "freight"],
+            "default": "subtotal",
+            "title": "Aplicar desconto em"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["percentage", "fixed"],
+            "default": "percentage",
+            "title": "Tipo de desconto"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "title": "Valor do desconto"
+          },
+          "min_amount": {
+            "type": "number",
+            "minimum": 0,
+            "title": "Valor mínimo do pedido para aplicar desconto"
+          },
+          "credit_card": {
+            "type": "boolean",
+            "title": "Aplicar no cartão de crédito"
+          },
+          "banking_billet": {
+            "type": "boolean",
+            "title": "Aplicar no boleto"
+          },
+          "account_deposit": {
+            "type": "boolean",
+            "title": "Aplicar no PIX"
+          }
+        },
+        "title": "Desconto"
+      },
+      "hide": false
+    }
+  }
+}
