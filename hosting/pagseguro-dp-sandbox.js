@@ -43,6 +43,7 @@
    * @returns {Promise<string>} encrypted card string
    */
   window.pagbankEncryptCard = function (card) {
+    console.log('[PagBank] card object keys:', Object.keys(card))
     return new Promise(function (resolve, reject) {
       const encrypt = function () {
         const publicKey = window.pagbankPublicKey
@@ -61,7 +62,7 @@
         try {
           const result = PagSeguro.encryptCard({
             publicKey,
-            holder: card.holder || card.holder_name || '',
+            holder: card.holder || card.holder_name || card.name || '',
             number: String(card.number || '').replace(/\D/g, ''),
             expMonth,
             expYear,

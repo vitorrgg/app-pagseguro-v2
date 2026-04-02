@@ -1,12 +1,12 @@
 {
-  "app_id": 0,
+  "app_id": 110110,
   "state": "active",
   "title": "PagBank (PagSeguro v2)",
   "slug": "pagseguro-v2",
   "version": "1.0.0",
   "type": "external",
   "authentication": true,
-  "auth_callback_uri": "https://us-central1-CHANGE_ME.cloudfunctions.net/app/ecom/auth-callback",
+  "auth_callback_uri": "https://us-central1-ecom-pagseguro-v2.cloudfunctions.net/app/ecom/auth-callback",
   "auth_scope": {
     "stores": ["GET"],
     "procedures": ["POST"],
@@ -18,20 +18,28 @@
   "modules": {
     "list_payments": {
       "enabled": true,
-      "endpoint": "https://us-central1-CHANGE_ME.cloudfunctions.net/app/ecom/modules/list-payments"
+      "endpoint": "https://us-central1-ecom-pagseguro-v2.cloudfunctions.net/app/ecom/modules/list-payments"
     },
     "create_transaction": {
       "enabled": true,
-      "endpoint": "https://us-central1-CHANGE_ME.cloudfunctions.net/app/ecom/modules/create-transaction"
+      "endpoint": "https://us-central1-ecom-pagseguro-v2.cloudfunctions.net/app/ecom/modules/create-transaction"
     }
   },
   "admin_settings": {
+    "pagbank_connect": {
+      "schema": {
+        "type": "string",
+        "title": "Conectar conta PagBank",
+        "description": "Para conectar sua conta PagBank, acesse: https://us-central1-ecom-pagseguro-v2.cloudfunctions.net/app/pagbank/connect/start?store_id={store_id} (substitua {store_id} pelo ID da sua loja)"
+      },
+      "hide": false
+    },
     "pagbank_token": {
       "schema": {
         "type": "string",
         "maxLength": 255,
         "title": "Token PagBank",
-        "description": "Token de autenticação Bearer da conta PagBank. Obtenha em: Minha Conta → Configurações → Integrações → Token de segurança"
+        "description": "Token de autenticação Bearer da conta PagBank. Veja como obter: https://developer.pagbank.com.br/v1/reference/como-obter-token-de-autenticacao"
       },
       "hide": true
     },

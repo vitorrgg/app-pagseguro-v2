@@ -42,10 +42,15 @@ if (!hostingUri) {
   }
 }
 
+const pagbankClientId = process.env.PAGBANK_CLIENT_ID || ''
+const pagbankClientSecret = process.env.PAGBANK_CLIENT_SECRET || ''
+
 module.exports = {
   pkg,
   functionName,
   operatorToken,
   baseUri,
-  hostingUri
+  hostingUri,
+  pagbankClientId,
+  pagbankClientSecret
 }

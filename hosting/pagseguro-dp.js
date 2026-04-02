@@ -61,7 +61,7 @@
         try {
           const result = PagSeguro.encryptCard({
             publicKey,
-            holder: card.holder || card.holder_name || '',
+            holder: card.holder || card.holder_name || card.name || '',
             number: String(card.number || '').replace(/\D/g, ''),
             expMonth,
             expYear,

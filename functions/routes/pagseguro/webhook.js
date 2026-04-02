@@ -31,13 +31,16 @@ exports.post = async ({ appSdk }, req, res) => {
   const chargeStatus = charge.status
   const ecomStatus = parseChargeStatus(chargeStatus)
 
+  // orderId is the PagBank order ID (ORDE_...), used as fallback for PIX lookup
+  const orderId = payload.id
+
   logger.info(`PagBank webhook: charge ${chargeId} → ${chargeStatus} (${ecomStatus})`, {
     storeId,
-    orderId: payload.reference_id
+    orderId
   })
 
   try {
-    await updateOrderPaymentStatus(appSdk, storeId, chargeId, ecomStatus)
+    await updateOrderPaymentStatus(appSdk, storeId, chargeId, ecomStatus, orderId)
     res.sendStatus(200)
   } catch (err) {
     if (err.name === 'NotFound') {
@@ -45,7 +48,7 @@ exports.post = async ({ appSdk }, req, res) => {
       // retry after 5s (race condition with create-transaction)
       setTimeout(async () => {
         try {
-          await updateOrderPaymentStatus(appSdk, storeId, chargeId, ecomStatus)
+          await updateOrderPaymentStatus(appSdk, storeId, chargeId, ecomStatus, orderId)
         } catch (retryErr) {
           logger.error('PagBank webhook retry failed', { storeId, chargeId, err: retryErr.message })
         }
@@ -59,14 +62,30 @@ exports.post = async ({ appSdk }, req, res) => {
 
 /**
  * Find order in E-Com Plus by charge ID and post payment status update.
+ * Falls back to orderId (ORDE_...) lookup for PIX, where webhook sends CHAR_UUID
+ * but we stored QRCO_UUID as transaction_code.
  * @throws {Error} with name='NotFound' if order not found
  */
-const updateOrderPaymentStatus = async (appSdk, storeId, chargeId, ecomStatus) => {
-  const endpoint = `orders.json?transactions.intermediator.transaction_code=${chargeId}` +
-    '&fields=_id,financial_status,transactions._id,transactions.status,transactions.intermediator'
+const updateOrderPaymentStatus = async (appSdk, storeId, chargeId, ecomStatus, orderId) => {
+  const fields = '_id,financial_status,transactions._id,transactions.status,transactions.intermediator'
 
-  const result = await appSdk.apiRequest(storeId, endpoint, 'GET')
-  const orders = result && result.response && result.response.data && result.response.data.result
+  let orders
+  const result = await appSdk.apiRequest(
+    storeId,
+    `orders.json?transactions.intermediator.transaction_code=${chargeId}&fields=${fields}`,
+    'GET'
+  )
+  orders = result && result.response && result.response.data && result.response.data.result
+
+  // PIX fallback: webhook sends CHAR_UUID but we stored ORDE_UUID as transaction_reference
+  if ((!orders || !orders.length) && orderId) {
+    const result2 = await appSdk.apiRequest(
+      storeId,
+      `orders.json?transactions.intermediator.transaction_reference=${orderId}&fields=${fields}`,
+      'GET'
+    )
+    orders = result2 && result2.response && result2.response.data && result2.response.data.result
+  }
 
   if (!orders || !orders.length) {
     const err = new Error(`No order found for charge ${chargeId}`)
@@ -76,10 +95,15 @@ const updateOrderPaymentStatus = async (appSdk, storeId, chargeId, ecomStatus) =
 
   const order = orders[0]
 
-  // find the matching transaction
-  const matchTransaction = order.transactions && order.transactions.find(t => {
+  // find the matching transaction (by chargeId, or by orderId for PIX fallback)
+  let matchTransaction = order.transactions && order.transactions.find(t => {
     return t.intermediator && t.intermediator.transaction_code === chargeId
   })
+  if (!matchTransaction && orderId) {
+    matchTransaction = order.transactions && order.transactions.find(t => {
+      return t.intermediator && t.intermediator.transaction_reference === orderId
+    })
+  }
 
   if (!matchTransaction) {
     const err = new Error(`Transaction ${chargeId} not found in order ${order._id}`)

@@ -119,7 +119,9 @@ recursiveReadDir(routesDir).filter(filepath => filepath.endsWith('.js')).forEach
 
 server.use(router)
 
-exports[functionName] = functions.https.onRequest(createExecContext(server))
+exports[functionName] = functions
+  .runWith({ secrets: ['PAGBANK_CLIENT_ID', 'PAGBANK_CLIENT_SECRET'] })
+  .https.onRequest(createExecContext(server))
 console.log(`-- Starting '${app.title}' E-Com Plus app with Function '${functionName}'`)
 
 // schedule update tokens job
@@ -130,3 +132,26 @@ exports.updateTokens = functions.pubsub.schedule(cron).onRun(() => {
   })
 })
 console.log(`-- Sheduled update E-Com Plus tokens '${cron}'`)
+
+// schedule PagBank Connect token refresh (every 6 hours)
+const { refreshConnectToken } = require('./lib/pagseguro/connect-token')
+const pagbankCron = '10 */6 * * *'
+exports.refreshPagbankTokens = functions
+  .runWith({ secrets: ['PAGBANK_CLIENT_ID', 'PAGBANK_CLIENT_SECRET'] })
+  .pubsub.schedule(pagbankCron).onRun(async () => {
+  const db = admin.firestore()
+  const snapshot = await db.collection('pagbank_tokens').get()
+  const twoHoursFromNow = new Date(Date.now() + 2 * 3600 * 1000)
+  const promises = []
+  snapshot.forEach(doc => {
+    const { refresh_token, expires_at } = doc.data()
+    if (refresh_token && (!expires_at || new Date(expires_at) < twoHoursFromNow)) {
+      promises.push(
+        refreshConnectToken(doc.id, refresh_token, db)
+          .catch(err => console.error(`PagBank token refresh failed for store ${doc.id}:`, err.message))
+      )
+    }
+  })
+  return Promise.all(promises)
+})
+console.log(`-- Sheduled refresh PagBank Connect tokens '${pagbankCron}'`)

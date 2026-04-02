@@ -1,29 +1,31 @@
 const createPagbankAxios = require('../../../lib/pagseguro/axios-instance')
 const buildOrderPayload = require('../../../lib/pagseguro/build-order-payload')
-const { parseAddress } = require('../../../lib/pagseguro/build-order-payload')
+const { parseBoletoAddress } = require('../../../lib/pagseguro/build-order-payload')
 const parseChargeStatus = require('../../../lib/pagseguro/parse-status')
+const { getConnectToken } = require('../../../lib/pagseguro/connect-token')
 const { baseUri } = require('../../../__env')
 const { logger } = require('../../../context')
 
-exports.post = async ({ appSdk }, req, res) => {
+exports.post = async ({ appSdk, admin }, req, res) => {
   // https://apx-mods.e-com.plus/api/v1/create_transaction/schema.json?store_id=100
   const { params, application } = req.body
   const { storeId } = req
 
   const config = Object.assign({}, application.data, application.hidden_data)
 
-  if (!config.pagbank_token) {
+  const pagbankToken = await getConnectToken(storeId, admin.firestore()) || config.pagbank_token
+  if (!pagbankToken) {
     return res.status(409).send({
       error: 'NO_PAGBANK_TOKEN',
-      message: 'Token PagBank não configurado'
+      message: 'Conta PagBank não conectada'
     })
   }
 
   const isSandbox = config.sandbox === true
-  const pagbank = createPagbankAxios(config.pagbank_token, isSandbox)
+  const pagbank = createPagbankAxios(pagbankToken, isSandbox)
 
-  const { transaction, buyer, to, billing_address: billingAddress, order_number: orderNumber } = params
-  const methodCode = transaction.payment_method.code
+  const { buyer, to, billing_address: billingAddress, order_number: orderNumber } = params
+  const methodCode = params.payment_method && params.payment_method.code
 
   // calculate amounts in cents
   const amountTotal = Math.round((params.amount.total || 0) * 100)
@@ -164,7 +166,7 @@ exports.post = async ({ appSdk }, req, res) => {
                 name: String(buyer.fullname || buyer.name || '').substr(0, 100),
                 tax_id: String(buyer.doc_number || buyer.registry_number || '').replace(/\D/g, ''),
                 email: String(buyer.email || '').substr(0, 60),
-                address: parseAddress(address)
+                address: parseBoletoAddress(address)
               },
               instruction_lines: {
                 line_1: instructionLines.first || 'Atenção: não receber após vencimento.',
@@ -218,40 +220,24 @@ exports.post = async ({ appSdk }, req, res) => {
       }
 
       case 'account_deposit': {
-        // PIX
+        // PIX — uses qr_codes at order level, not charges
         const pixConfig = config.pix || {}
         const expirationMinutes = pixConfig.expiration_minutes || 1440
         const pixExpirationDate = new Date(Date.now() + expirationMinutes * 60 * 1000).toISOString()
 
-        const charge = {
-          reference_id: String(orderNumber).substr(0, 64),
-          description: `Pedido #${orderNumber}`.substr(0, 64),
-          amount: {
-            value: chargeAmount,
-            currency: 'BRL'
-          },
-          payment_method: {
-            type: 'PIX',
-            pix: {
-              expiration_date: pixExpirationDate
-            }
-          }
-        }
-
         const { data } = await pagbank.post('/orders', {
           ...basePayload,
-          charges: [charge]
+          qr_codes: [{
+            amount: { value: chargeAmount },
+            expiration_date: pixExpirationDate
+          }]
         })
 
         responseData = data
-        const responseCharge = data.charges && data.charges[0]
-        const chargeId = responseCharge && responseCharge.id
-        const chargeStatus = responseCharge && responseCharge.status
+        const qrCode = data.qr_codes && data.qr_codes[0]
+        const chargeId = qrCode && qrCode.id
+        const chargeStatus = qrCode && qrCode.status
 
-        // extract QR code data
-        const qrCodes = responseCharge && responseCharge.payment_method &&
-          responseCharge.payment_method.qr_codes
-        const qrCode = qrCodes && qrCodes[0]
         const qrLinks = qrCode && qrCode.links
         const qrPngLink = qrLinks &&
           (qrLinks.find(l => l.rel === 'QRCODE.PNG') || qrLinks.find(l => l.media === 'image/png'))

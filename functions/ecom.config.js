@@ -2,7 +2,7 @@ const { baseUri, hostingUri } = require('./__env')
 
 // https://developers.e-com.plus/docs/api/#/store/applications/
 const app = {
-  app_id: 0,
+  app_id: 110110,
   state: 'active',
   title: 'PagBank (PagSeguro v2)',
   slug: 'pagseguro-v2',
@@ -29,12 +29,20 @@ const app = {
     }
   },
   admin_settings: {
+    pagbank_connect: {
+      schema: {
+        type: 'string',
+        title: 'Conectar conta PagBank',
+        description: `Para conectar sua conta PagBank, acesse: ${baseUri}/pagbank/connect/start?store_id={store_id} (substitua {store_id} pelo ID da sua loja)`
+      },
+      hide: false
+    },
     pagbank_token: {
       schema: {
         type: 'string',
         maxLength: 255,
         title: 'Token PagBank',
-        description: 'Token de autenticação da conta PagBank (Bearer token). Obtenha em conta.pagseguro.uol.com.br → Configurações → Integrações'
+        description: 'Token de autenticação Bearer da conta PagBank. Veja como obter: https://developer.pagbank.com.br/v1/reference/como-obter-token-de-autenticacao'
       },
       hide: true
     },

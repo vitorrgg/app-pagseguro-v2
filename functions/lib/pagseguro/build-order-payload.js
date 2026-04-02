@@ -83,5 +83,21 @@ const parseAddress = (address) => {
   }
 }
 
+const parseBoletoAddress = (address) => {
+  const stateCode = String(address.province_code || address.state || '').substr(0, 2).toUpperCase()
+  return {
+    street: String(address.street || '').substr(0, 100),
+    number: String(address.number || 'SN').substr(0, 20),
+    complement: address.complement ? String(address.complement).substr(0, 40) : undefined,
+    locality: String(address.borough || address.neighborhood || '').substr(0, 60),
+    city: String(address.city || '').substr(0, 90),
+    region_code: stateCode,
+    region: stateCode,
+    country: 'BRA',
+    postal_code: String(address.zip || address.postal_code || '').replace(/\D/g, '').substr(0, 8)
+  }
+}
+
 module.exports = buildOrderPayload
 module.exports.parseAddress = parseAddress
+module.exports.parseBoletoAddress = parseBoletoAddress

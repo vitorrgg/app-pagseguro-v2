@@ -1,26 +1,28 @@
 const { hostingUri } = require('../../../__env')
 const createPagbankAxios = require('../../../lib/pagseguro/axios-instance')
+const { getConnectToken } = require('../../../lib/pagseguro/connect-token')
 const getAppData = require('../../../lib/store-api/get-app-data')
 const { logger } = require('../../../context')
 
-exports.post = async ({ appSdk }, req, res) => {
+exports.post = async ({ appSdk, admin }, req, res) => {
   // https://apx-mods.e-com.plus/api/v1/list_payments/schema.json?store_id=100
   const { params, application } = req.body
   const { storeId } = req
 
   const config = Object.assign({}, application.data, application.hidden_data)
 
-  if (!config.pagbank_token) {
+  const pagbankToken = await getConnectToken(storeId, admin.firestore()) || config.pagbank_token
+  if (!pagbankToken) {
     return res.status(409).send({
       error: 'NO_PAGBANK_TOKEN',
-      message: 'Token PagBank não configurado (lojista deve configurar o aplicativo)'
+      message: 'Conta PagBank não conectada. Acesse as configurações do app para conectar.'
     })
   }
 
   const isSandbox = config.sandbox === true
-  const pagbank = createPagbankAxios(config.pagbank_token, isSandbox)
+  const pagbank = createPagbankAxios(pagbankToken, isSandbox)
   const scriptSuffix = isSandbox ? '-sandbox' : ''
-  const scriptUri = `${hostingUri}/pagseguro-dp${scriptSuffix}.js`
+  const scriptUri = `${hostingUri}/pagseguro-dp${scriptSuffix}.js?v=2`
 
   // https://apx-mods.e-com.plus/api/v1/list_payments/response_schema.json?store_id=100
   const response = {
