@@ -8,12 +8,27 @@
   "authentication": true,
   "auth_callback_uri": "https://us-central1-ecom-pagseguro-v2.cloudfunctions.net/app/ecom/auth-callback",
   "auth_scope": {
-    "stores": ["GET"],
-    "procedures": ["POST"],
-    "products": ["GET"],
-    "orders": ["GET", "POST", "PATCH"],
-    "orders/payments_history": ["GET", "POST"],
-    "payments": ["POST"]
+    "stores": [
+      "GET"
+    ],
+    "procedures": [
+      "POST"
+    ],
+    "products": [
+      "GET"
+    ],
+    "orders": [
+      "GET",
+      "POST",
+      "PATCH"
+    ],
+    "orders/payments_history": [
+      "GET",
+      "POST"
+    ],
+    "payments": [
+      "POST"
+    ]
   },
   "modules": {
     "list_payments": {
@@ -48,7 +63,16 @@
         "type": "boolean",
         "default": false,
         "title": "Sandbox (ambiente de testes)",
-        "description": "Ative para usar o ambiente sandbox do PagBank com credenciais de teste"
+        "description": "Ative para usar o ambiente sandbox do PagBank. Requer credenciais de sandbox separadas."
+      },
+      "hide": false
+    },
+    "label": {
+      "schema": {
+        "type": "string",
+        "maxLength": 50,
+        "title": "Rótulo",
+        "description": "Rótulo exibido para o método de pagamento no checkout (ex: \"PagBank\")"
       },
       "hide": false
     },
@@ -65,12 +89,13 @@
           "label": {
             "type": "string",
             "maxLength": 50,
-            "title": "Rótulo"
+            "title": "Rótulo do cartão de crédito"
           },
           "min_amount": {
             "type": "number",
             "minimum": 0,
-            "title": "Valor mínimo do pedido"
+            "title": "Valor mínimo para cartão",
+            "description": "Valor mínimo do pedido para habilitar pagamento com cartão"
           }
         },
         "title": "Cartão de crédito"
@@ -85,33 +110,34 @@
           "max_number": {
             "type": "integer",
             "minimum": 2,
-            "maximum": 24,
-            "default": 12,
-            "title": "Número máximo de parcelas"
+            "maximum": 999,
+            "title": "Número máximo de parcelas",
+            "default": 12
           },
           "min_installment": {
             "type": "number",
             "minimum": 1,
-            "default": 5,
-            "title": "Valor mínimo por parcela (R$)"
+            "title": "Valor mínimo por parcela (R$)",
+            "default": 5
           },
           "tax_value": {
             "type": "number",
             "minimum": 0,
             "maximum": 100,
-            "default": 0,
             "title": "Taxa de juros ao mês (%)",
-            "description": "Juros aplicados após o número de parcelas sem juros"
+            "description": "Juros aplicados nas parcelas com juros. Use 0 para parcelas sem juros.",
+            "default": 0
           },
           "interest_free_installments": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 24,
-            "default": 1,
-            "title": "Parcelas sem juros"
+            "maximum": 999,
+            "title": "Parcelas sem juros",
+            "description": "Número de parcelas sem cobrança de juros",
+            "default": 1
           }
         },
-        "title": "Parcelamento"
+        "title": "Opções de parcelamento"
       },
       "hide": false
     },
@@ -128,7 +154,7 @@
           "label": {
             "type": "string",
             "maxLength": 50,
-            "title": "Rótulo"
+            "title": "Rótulo do boleto"
           },
           "expiration_days": {
             "type": "integer",
@@ -140,7 +166,7 @@
           "min_amount": {
             "type": "number",
             "minimum": 0,
-            "title": "Valor mínimo do pedido"
+            "title": "Valor mínimo para boleto"
           },
           "instruction_lines": {
             "type": "object",
@@ -149,12 +175,12 @@
               "first": {
                 "type": "string",
                 "maxLength": 75,
-                "title": "Instrução linha 1"
+                "title": "Linha 1"
               },
               "second": {
                 "type": "string",
                 "maxLength": 75,
-                "title": "Instrução linha 2"
+                "title": "Linha 2"
               }
             },
             "title": "Instruções do boleto"
@@ -177,20 +203,20 @@
           "label": {
             "type": "string",
             "maxLength": 50,
-            "title": "Rótulo"
+            "title": "Rótulo do PIX"
           },
           "expiration_minutes": {
             "type": "integer",
             "minimum": 1,
             "maximum": 43200,
             "default": 1440,
-            "title": "Expiração do QR Code (minutos)",
-            "description": "Padrão: 1440 minutos (24 horas)"
+            "title": "Expiração do QR Code PIX (minutos)",
+            "description": "Tempo em minutos para o QR Code PIX expirar. Padrão: 1440 (24 horas)"
           },
           "min_amount": {
             "type": "number",
             "minimum": 0,
-            "title": "Valor mínimo do pedido"
+            "title": "Valor mínimo para PIX"
           }
         },
         "title": "PIX"
@@ -205,13 +231,12 @@
           "enable": {
             "type": "boolean",
             "title": "Habilitar link de pagamento PagBank",
-            "default": false,
-            "description": "Redireciona o cliente para o checkout hospedado do PagBank"
+            "default": false
           },
           "label": {
             "type": "string",
             "maxLength": 50,
-            "title": "Rótulo"
+            "title": "Rótulo do link de pagamento"
           }
         },
         "title": "Link de pagamento (Checkout PagBank)"
@@ -225,19 +250,27 @@
         "properties": {
           "apply_at": {
             "type": "string",
-            "enum": ["total", "subtotal", "freight"],
+            "enum": [
+              "total",
+              "subtotal",
+              "freight"
+            ],
             "default": "subtotal",
             "title": "Aplicar desconto em"
           },
           "type": {
             "type": "string",
-            "enum": ["percentage", "fixed"],
+            "enum": [
+              "percentage",
+              "fixed"
+            ],
             "default": "percentage",
             "title": "Tipo de desconto"
           },
           "value": {
             "type": "number",
             "minimum": 0,
+            "maximum": 100,
             "title": "Valor do desconto"
           },
           "min_amount": {
@@ -247,20 +280,21 @@
           },
           "credit_card": {
             "type": "boolean",
-            "title": "Aplicar no cartão de crédito"
+            "title": "Desconto no cartão de crédito"
           },
           "banking_billet": {
             "type": "boolean",
-            "title": "Aplicar no boleto"
+            "title": "Desconto no boleto"
           },
           "account_deposit": {
             "type": "boolean",
-            "title": "Aplicar no PIX"
+            "title": "Desconto no PIX"
           }
         },
         "title": "Desconto"
       },
       "hide": false
     }
-  }
+  },
+  "base_uri": "https://us-central1-ecom-pagseguro-v2.cloudfunctions.net/app"
 }
