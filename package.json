@@ -4,7 +4,7 @@
   "description": "PagBank (PagSeguro v2) payment app for E-Com Plus",
   "license": "MIT",
   "scripts": {
-    "deploy": "firebase deploy --token $FIREBASE_TOKEN --project $FIREBASE_PROJECT_ID"
+    "deploy": "firebase deploy --token $FIREBASE_TOKEN --project $FIREBASE_PROJECT_ID --force"
   },
   "dependencies": {}
 }
