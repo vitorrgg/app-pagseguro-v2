@@ -42,8 +42,8 @@ if (!hostingUri) {
   }
 }
 
-const pagbankClientId = process.env.PAGBANK_CLIENT_ID || ''
-const pagbankClientSecret = process.env.PAGBANK_CLIENT_SECRET || ''
+const pagbankClientId = (process.env.PAGBANK_CLIENT_ID || '').trim()
+const pagbankClientSecret = (process.env.PAGBANK_CLIENT_SECRET || '').trim()
 
 module.exports = {
   pkg,

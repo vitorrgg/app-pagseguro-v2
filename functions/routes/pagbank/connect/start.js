@@ -1,9 +1,10 @@
 const { pagbankClientId, baseUri } = require('../../../__env')
+const { logger } = require('../../../context')
 
 const isSandbox = process.env.PS_SANDBOX === 'true'
 const pagbankConnectBase = isSandbox
-  ? 'https://connect.sandbox.pagseguro.uol.com.br'
-  : 'https://connect.pagseguro.uol.com.br'
+  ? 'https://connect.sandbox.pagbank.com.br'
+  : 'https://connect.pagbank.com.br'
 
 const REDIRECT_URI = `${baseUri}/pagbank/connect/callback`
 const SCOPE = 'payments.create+payments.read'
@@ -25,5 +26,19 @@ exports.get = ({ appSdk }, req, res) => {
     state: String(storeId)
   })
 
-  res.redirect(`${pagbankConnectBase}/oauth2/authorize?${params.toString()}`)
+  const authUrl = `${pagbankConnectBase}/oauth2/authorize?${params.toString()}`
+
+  logger.info('PagBank Connect: redirecting to authorization', {
+    isSandbox,
+    client_id: pagbankClientId,
+    redirect_uri: REDIRECT_URI,
+    authUrl
+  })
+
+  // debug: return the URL instead of redirecting so we can inspect it
+  if (req.query.debug === '1') {
+    return res.json({ isSandbox, client_id: pagbankClientId, redirect_uri: REDIRECT_URI, authUrl })
+  }
+
+  res.redirect(authUrl)
 }
