@@ -7,7 +7,7 @@ const pagbankConnectBase = isSandbox
   : 'https://connect.pagbank.com.br'
 
 const REDIRECT_URI = `${baseUri}/pagbank/connect/callback`
-const SCOPE = 'payments.create+payments.read'
+const SCOPE = 'payments.create payments.read'
 
 exports.get = ({ appSdk }, req, res) => {
   const storeId = parseInt(req.query.store_id, 10)
