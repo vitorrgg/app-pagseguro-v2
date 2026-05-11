@@ -1,5 +1,6 @@
 {
   "app_id": 110110,
+  "state": "active",
   "title": "PagBank (PagSeguro v2)",
   "slug": "pagseguro-v2",
   "version": "1.0.0",
@@ -40,6 +41,14 @@
     }
   },
   "admin_settings": {
+    "pagbank_connect": {
+      "schema": {
+        "type": "string",
+        "title": "Conectar conta PagBank",
+        "description": "Para conectar sua conta PagBank, acesse: https://us-central1-ecom-pagseguro-v2.cloudfunctions.net/app/pagbank/connect/start?store_id={store_id} (substitua {store_id} pelo ID da sua loja)"
+      },
+      "hide": false
+    },
     "pagbank_token": {
       "schema": {
         "type": "string",
@@ -287,4 +296,5 @@
       "hide": false
     }
   },
+  "base_uri": "https://us-central1-ecom-pagseguro-v2.cloudfunctions.net/app"
 }
