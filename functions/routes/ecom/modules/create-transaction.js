@@ -27,10 +27,8 @@ exports.post = async ({ appSdk, admin }, req, res) => {
   const { buyer, to, billing_address: billingAddress, order_number: orderNumber } = params
   const methodCode = params.payment_method && params.payment_method.code
 
-  // calculate amounts in cents
-  const amountTotal = Math.round((params.amount.total || 0) * 100)
-  const amountDiscount = Math.round((params.amount.discount || 0) * 100)
-  const chargeAmount = Math.max(amountTotal - amountDiscount, 0)
+  // amount.total already accounts for discounts and freight
+  const chargeAmount = Math.round((params.amount.total || 0) * 100)
 
   // build base order payload (items, customer, shipping)
   const basePayload = buildOrderPayload(params)
