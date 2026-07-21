@@ -89,6 +89,15 @@ exports.post = async ({ appSdk, admin }, req, res) => {
     const installments = config.installments_option
     if (installments && installments.max_number > 1) {
       const { max_number: maxNumber, min_installment: minInstallment = 5, tax_value: taxValue = 0, interest_free_installments: interestFree = 1 } = installments
+
+      // expose the store-configured installments regardless of amount context
+      // (eg. product listing pages call list_payments without an amount/total)
+      response.installments_option = {
+        min_installment: minInstallment,
+        max_number: maxNumber,
+        monthly_interest: taxValue
+      }
+
       const total = params.amount && params.amount.total
       if (total) {
         gateway.installment_options = []
@@ -108,13 +117,6 @@ exports.post = async ({ appSdk, admin }, req, res) => {
               value,
               tax: hasInterest
             })
-          }
-        }
-        if (gateway.installment_options.length) {
-          response.installments_option = {
-            min_installment: minInstallment,
-            max_number: maxNumber,
-            monthly_interest: taxValue
           }
         }
       }
